@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Http\Requests\StoreBookingRequest;
+use App\Dto\CreateBookingData;
 use App\Models\Booking;
 use App\Models\Room;
 use App\Models\User;
@@ -23,24 +23,17 @@ class BookingService
 
     private const WORKDAY_END = '20:00';
 
-    public function create(StoreBookingRequest $request): Booking
+    public function create(CreateBookingData $data): Booking
     {
-        /** @var array{room_id: int, title: string, starts_at: string, ends_at: string} $data */
-        $data = $request->validated();
-        $user = $request->user();
+        $room = Room::query()->with('office')->findOrFail($data->roomId);
 
-        $room = Room::query()->with('office')->findOrFail($data['room_id']);
+        $this->assertDurationAndGrid($room, $data->startsAt, $data->endsAt);
+        $this->assertWithinWorkingHours($room, $data->startsAt, $data->endsAt);
 
-        $startsAt = CarbonImmutable::parse($data['starts_at'])->utc();
-        $endsAt = CarbonImmutable::parse($data['ends_at'])->utc();
-
-        $this->assertDurationAndGrid($room, $startsAt, $endsAt);
-        $this->assertWithinWorkingHours($room, $startsAt, $endsAt);
-
-        return DB::transaction(function () use ($user, $room, $data, $startsAt, $endsAt): Booking {
+        return DB::transaction(function () use ($data, $room): Booking {
             Room::query()->whereKey($room->id)->lockForUpdate()->firstOrFail();
 
-            if ($this->hasOverlap($room->id, $startsAt, $endsAt)) {
+            if ($this->hasOverlap($room->id, $data->startsAt, $data->endsAt)) {
                 throw ValidationException::withMessages([
                     'room_id' => 'Комната уже занята в указанный интервал.',
                 ]);
@@ -48,10 +41,10 @@ class BookingService
 
             return Booking::query()->create([
                 'room_id' => $room->id,
-                'user_id' => $user->id,
-                'title' => $data['title'],
-                'starts_at' => $startsAt,
-                'ends_at' => $endsAt,
+                'user_id' => $data->user->id,
+                'title' => $data->title,
+                'starts_at' => $data->startsAt,
+                'ends_at' => $data->endsAt,
             ]);
         });
     }

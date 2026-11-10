@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Dto\CreateBookingData;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreBookingRequest extends FormRequest
@@ -9,6 +10,11 @@ class StoreBookingRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    public function toDto(): CreateBookingData
+    {
+        return CreateBookingData::fromRequest($this);
     }
 
     /**

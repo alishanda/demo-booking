@@ -20,7 +20,7 @@ class BookingController extends Controller
 
     public function store(StoreBookingRequest $request, BookingService $bookings)
     {
-        $booking = $bookings->create($request);
+        $booking = $bookings->create($request->toDto());
 
         Log::channel('bookings')->info('Booking created', [
             'booking_id' => $booking->id,
