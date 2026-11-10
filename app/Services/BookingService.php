@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Requests\StoreBookingRequest;
 use App\Models\Booking;
 use App\Models\Room;
 use App\Models\User;
@@ -22,11 +23,12 @@ class BookingService
 
     private const WORKDAY_END = '20:00';
 
-    /**
-     * @param  array{room_id: int, title: string, starts_at: string, ends_at: string}  $data
-     */
-    public function create(User $user, array $data): Booking
+    public function create(StoreBookingRequest $request): Booking
     {
+        /** @var array{room_id: int, title: string, starts_at: string, ends_at: string} $data */
+        $data = $request->validated();
+        $user = $request->user();
+
         $room = Room::query()->with('office')->findOrFail($data['room_id']);
 
         $startsAt = CarbonImmutable::parse($data['starts_at'])->utc();
